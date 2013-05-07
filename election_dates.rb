@@ -33,7 +33,7 @@ def parse_wiki( href , year)
 	doc = Nokogiri::HTML(open(WIKI_BASE_URL+href))
 	doc.xpath('//div[@id="mw-content-text"]/ul/li').each do |elem|
 		elem = elem.text
-		if  MONTHS.include? elem.split(" ")[0] and not elem.include? "leadership" then
+		if  MONTHS.include? elem.split(" ")[0] && not elem.include? "leadership" 
 			election = {
 				location: elem.scan(/[A-Z]\S*/)[1,2].join(" ").gsub("Federal","").strip,
 				type: elem.match(/(\S* |\S* \S*-)(election|elections)/).to_s,
@@ -47,9 +47,7 @@ end
 
 doc = Nokogiri::HTML(open(WIKI_BASE_URL+WIKI_URL))
 doc.xpath('//div[@id="mw-content-text"]/ul//li//a').each do |year|
-	if year.text.to_i >= Time.now.year then
-		parse_wiki( year.xpath('@href').text , year.text)
-	end
+		parse_wiki( year.xpath('@href').text , year.text) if year.text.to_i >= Time.now.year 
 end
 
 
@@ -65,11 +63,9 @@ doc.xpath('//table/tbody//tr').each do |row|
 	end
 
 	row_data.each_with_index do |data , i|
-		puts data.strip.split(" ")[0]
-		if MONTHS.include? data.strip.split(" ")[0] then
-			print "true" 
+		if MONTHS.include? data.strip.split(" ")[0] 
 			date = Date.parse(data)
-			if( i == 0 ) then type = "municipal" else type = row_data[i-1] end
+			i == 0 ? type = "municipal" : type = row_data[i-1] 
 			election = {
 				location: location,
 				type: type.gsub("\n",""),
