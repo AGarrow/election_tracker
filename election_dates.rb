@@ -29,6 +29,7 @@ end
 #### Parse Wikipedia Pages ####
 
 def parse_wiki(href , year)
+	elections = []
 	doc = Nokogiri::HTML(open(WIKI_BASE_URL+href))
 	doc.xpath('//div[@id="mw-content-text"]/ul/li').each do |elem|
 		elem = elem.text
@@ -41,11 +42,12 @@ def parse_wiki(href , year)
 			elections.push(election)
 		end 
 	end
+	elections
 end
 
 doc = Nokogiri::HTML(open(WIKI_BASE_URL+WIKI_URL))
 doc.xpath('//div[@id="mw-content-text"]/ul//li//a').each do |year|
-		parse_wiki( year.xpath('@href').text , year.text) if year.text.to_i >= Time.now.year 
+		elections.push(parse_wiki( year.xpath('@href').text , year.text) if year.text.to_i >= Time.now.year) 
 end
 
 
