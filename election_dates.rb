@@ -16,11 +16,11 @@ elections = []
 
 doc = Nokogiri::HTML(open('http://www.psc-cfp.gc.ca/plac-acpl/leave-conge/ann2-eng.htm'))
 doc.xpath('//tr').each do |row|
-  next if row.children[1].text.include? 'Location'
+  next if row.children[0].text.include? 'Location'
   election = {
-    location: row.children[1].text,
-    type: row.children[3].text,
-    date: Date.parse(row.children[5].text),
+    location: row.children[0].text,
+    type: row.children[2].text,
+    date: Date.parse(row.children[4].text),
   }
   elections.push(election)
 end
