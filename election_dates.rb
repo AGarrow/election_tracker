@@ -8,18 +8,35 @@ elections = []
 
 source = 'http://www.psc-cfp.gc.ca/plac-acpl/leave-conge/ann2-eng.htm'
 doc = Nokogiri::HTML(open(source))
-doc.css('tr:gt(1)').each do |row|
-  tds = row.css('td')
+doc.xpath('//tr').each do |tr|
+  next if tr.at_css('th')
+  tds = tr.css('td')
+
+  tds[1].css('br').each{|br| br.replace(' ')}
+  type, notes = tds[1].text.downcase.match(/\A([^(]+?)(?: \(([^)]+)\))?\z/)[1..2]
+  if %w(federal provincial territorial).include?(type)
+    type = 'general'
+  end
+
+  scope = nil
+  if ['cities, towns and villages', 'hamlets', 'municipalities', 'resort villages', 'rural municipalities'].include?(type)
+    scope = type
+    type = 'municipal'
+  end
+
   elections.push({
-    location: tds[0].text,
-    type: tds[1].text,
     date: Date.parse(tds[2].text),
+    jurisdiction: tds[0].text,
+    type: type,
+    scope: scope,
+    notes: notes,
     source: source,
   })
 end
 
 MONTHS = %w(January February March April May June July August September October November December)
 JURISDICTIONS = [
+  'Canada',
   'Federal',
   'Alberta',
   'British Columbia',
@@ -62,16 +79,20 @@ def parse_wiki(href, year)
         division = text.strip.slice!(/.+/)
       end
 
+      if jurisdiction == 'Federal'
+        jurisdiction = 'Canada'
+      end
+
       unless text.strip.empty?
         puts "Warning: Unrecognized text #{text.inspect}"
       end
 
       elections.push({
+        date: Date.parse("#{date} #{year}"),
         jurisdiction: jurisdiction,
         type: type,
         scope: scope,
         division: division,
-        date: Date.parse("#{date} #{year}"),
         source: source,
       })
     end
@@ -101,9 +122,9 @@ doc.xpath('//table/tbody//tr').each do |row|
   row_data.each_with_index do |data, i|
     if MONTHS.include?(data.strip.split(' ')[0])
       elections.push({
+        date: Date.parse(data),
         location: location,
         type: i == 0 ? 'municipal' : row_data[i - 1].gsub("\n", ''),
-        date: Date.parse(data),
         source: source,
       })
     end
@@ -111,12 +132,15 @@ doc.xpath('//table/tbody//tr').each do |row|
 end
 
 CSV.open('elections.csv', 'w') do |csv|
-  csv << %w(Location Type Date Source)
+  csv << %w(Date Jurisdiction Type Scope Division Notes Source)
   elections.each do |election|
     csv << [
-      election[:location],
-      election[:type],
       election[:date],
+      election[:jurisdiction],
+      election[:type],
+      election[:scope],
+      election[:division],
+      election[:notes],
       election[:source],
     ]
   end
