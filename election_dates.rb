@@ -1,3 +1,4 @@
+# coding: utf-8
 require 'csv'
 require 'date'
 require 'open-uri'
@@ -50,6 +51,7 @@ JURISDICTIONS = [
   'Prince Edward Island',
   'Saskatchewan',
   'Quebec',
+  'Québec',
   'Yukon',
 ].map do |jurisdiction|
   Regexp.escape(jurisdiction)
@@ -111,20 +113,32 @@ end
 
 source = 'http://www.icurr.org/research/municipal_facts/Elections/index.php'
 doc = Nokogiri::HTML(open(source))
-doc.xpath('//table/tbody//tr').each do |row|
-  location = row.at_xpath('.//td[@class="lcell"]').text
-
-  row_data = []
-  row.at_xpath('.//td[@class="rcell"]').to_s.split('<br>').each do |line|
-    row_data.push(Nokogiri::HTML(line).text)
+doc.xpath('//table/tbody//tr').each do |tr|
+  texts = tr.at_xpath('.//td[@class="rcell"]').to_s.split('<br>').map do |html|
+    Nokogiri::HTML(html).text.strip
   end
 
-  row_data.each_with_index do |data, i|
-    if MONTHS.include?(data.strip.split(' ')[0])
+  texts.each_with_index do |text,index|
+    if MONTHS.include?(text.split(' ')[0])
+      jurisdiction = tr.at_xpath('.//td[@class="lcell"]').text
+      if jurisdiction == 'Québec'
+        jurisdiction = 'Quebec'
+      end
+
+      notes = nil
+      scope = nil
+      if index.nonzero?
+        texts[index - 1].slice!(/\(([^)]+)\):\z/)
+        notes = $1
+        scope = texts[index - 1].gsub("\n", '').sub(/\AFor /, '').sub(/:\z/, '').downcase.strip
+      end
+
       elections.push({
-        date: Date.parse(data),
-        location: location,
-        type: i == 0 ? 'municipal' : row_data[i - 1].gsub("\n", ''),
+        date: Date.parse(text),
+        jurisdiction: jurisdiction,
+        type: 'municipal',
+        scope: scope,
+        notes: notes,
         source: source,
       })
     end
